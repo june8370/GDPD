@@ -1,8 +1,14 @@
-// -------- Simple navigation handling --------
+// ==================================================
+// J.U.N.E.
+// Official Website Script
+// ==================================================
+
+// ---------------- Navigation Handling ----------------
 const views = {
   home: document.getElementById("home"),
   news: document.getElementById("news")
 };
+
 const links = {
   home: document.getElementById("link-home"),
   news: document.getElementById("link-news")
@@ -10,8 +16,8 @@ const links = {
 
 function showView(view) {
   for (const key in views) {
-    views[key].style.display = key === view ? "" : "none";
-    links[key].setAttribute("aria-current", key === view ? "true" : "false");
+    if (views[key]) views[key].style.display = key === view ? "" : "none";
+    if (links[key]) links[key].setAttribute("aria-current", key === view ? "true" : "false");
   }
 }
 
@@ -19,69 +25,84 @@ function handleHash() {
   const hash = location.hash.replace("#", "") || "home";
   showView(hash in views ? hash : "home");
 }
+
 window.addEventListener("hashchange", handleHash);
 handleHash();
 
-// -------- Static sample news feed --------
-const sampleNews = [
-  {
-    category: "Military",
-    title: "Australia warns China's military build-up demands a response",
-    summary:
-      "Australia's defence minister says China's rapid expansion requires regional deterrence and strategic investment.",
-    source: "Reuters",
-    date: "2025-11-03"
-  },
-  {
-    category: "Military",
-    title: "U.S. announces nuclear submarine tech sharing with South Korea",
-    summary:
-      "The agreement will allow South Korea to develop nuclear-powered submarines, reshaping regional security dynamics.",
-    source: "AP News",
-    date: "2025-10-29"
-  },
-  {
-    category: "Military",
-    title: "Ukraine expands innovative drone coordination tactics",
-    summary:
-      "Ukrainian forces adopt real-time drone coordination systems, increasing field efficiency and adaptability.",
-    source: "The Guardian",
-    date: "2025-11-03"
-  },
-  {
-    category: "Research",
-    title: "Global climate policy research gains traction",
-    summary:
-      "Scientists highlight international efforts to mitigate climate impact through new research and policy collaboration.",
-    source: "Nature",
-    date: "2025-11-03"
-  },
-  {
-    category: "Research",
-    title: "Activity rhythms linked to Alzheimer’s protection",
-    summary:
-      "Studies suggest circadian regulation and physical activity may reduce cognitive decline risk.",
-    source: "ScienceDaily",
-    date: "2025-11-01"
-  }
-];
+// ---------------- Live Military News Feed ----------------
+const NEWS_API_KEY = "9706b53ba74c4755bbdc9e5d1da8828c"; // ⚠️ Replace with your NewsAPI key
+const NEWS_QUERY = "military OR defence OR war OR armed forces OR army OR navy OR air force";
+const NEWS_LANGUAGE = "en";
+const NEWS_PAGE_SIZE = 10; // number of news articles to load
 
-// Render articles into news page
-function renderNews(list) {
+// Fetch and display the latest military news
+async function fetchLiveMilitaryNews() {
+  const container = document.getElementById("news-list");
+  container.innerHTML = `<p class="loading">Loading latest intelligence reports...</p>`;
+  
+  try {
+    const url = `https://newsapi.org/v2/everything?` +
+      `q=${encodeURIComponent(NEWS_QUERY)}` +
+      `&language=${NEWS_LANGUAGE}` +
+      `&sortBy=publishedAt` +
+      `&pageSize=${NEWS_PAGE_SIZE}` +
+      `&apiKey=${NEWS_API_KEY}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.status === "ok" && data.articles && data.articles.length > 0) {
+      renderNews(data.articles.map(a => ({
+        title: a.title,
+        summary: a.description || "No summary available.",
+        source: a.source.name || "Unknown Source",
+        date: a.publishedAt ? new Date(a.publishedAt).toLocaleDateString() : "",
+        url: a.url
+      })));
+    } else {
+      container.innerHTML = `<p class="error">No military reports found at this moment.</p>`;
+      console.warn("News API response:", data);
+    }
+  } catch (err) {
+    console.error("Error fetching news:", err);
+    container.innerHTML = `<p class="error">Unable to retrieve latest reports. Please check your connection or API key.</p>`;
+  }
+}
+
+// Render the fetched news articles
+function renderNews(newsList) {
   const container = document.getElementById("news-list");
   container.innerHTML = "";
-  list.forEach(item => {
+  
+  newsList.forEach(item => {
     const card = document.createElement("article");
     card.className = "news-item";
     card.innerHTML = `
-      <div class="meta">${item.category} · ${item.date}</div>
-      <h3>${item.title}</h3>
-      <p>${item.summary}</p>
-      <div class="meta">Source: ${item.source}</div>
-      <a class="source-link" href="#" onclick="return false">Read original</a>
+      <div class="meta">Military · ${escapeHtml(item.date)}</div>
+      <h3><a href="${item.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></h3>
+      <p>${escapeHtml(item.summary)}</p>
+      <div class="meta">Source: ${escapeHtml(item.source)}</div>
     `;
     container.appendChild(card);
   });
 }
 
-renderNews(sampleNews);
+// Escape potentially unsafe HTML
+function escapeHtml(str) {
+  return (str || "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c]));
+}
+
+// ---------------- Auto Refresh Mechanism ----------------
+// Fetch once immediately, then refresh every 10 minutes
+fetchLiveMilitaryNews();
+setInterval(fetchLiveMilitaryNews, 10 * 60 * 1000);
+
+// ---------------- Console Banner ----------------
+console.log("%cJ.U.N.E. Intelligence Division Online", "color: #004080; font-weight: bold;");
+console.log("%cMonitoring global military developments...", "color: gray;");
