@@ -1,6 +1,6 @@
 // ==================================================
 // J.U.N.E. — Joint Unified National Elite
-// Global Intelligence Feed
+// Global Intelligence Division
 // ==================================================
 
 // ========== CONFIG ==========
