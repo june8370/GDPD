@@ -23,27 +23,46 @@ newsBtn.addEventListener("click", () => {
   homeSection.classList.remove("active");
 });
 
-// RSS Feeds for defence & research news
+// Reliable global defence RSS sources
 const feeds = [
   "https://feeds.bbci.co.uk/news/world/rss.xml",
   "https://www.defence-blog.com/feed/",
-  "https://www.military.com/rss-feeds/content",
-  "https://www.globalsecurity.org/military/rss/news.xml",
-  "https://www.reuters.com/rssFeed/defense.xml"
+  "https://www.reuters.com/rssFeed/defense.xml",
+  "https://www.globalsecurity.org/military/rss/news.xml"
+];
+
+// Fallback proxy list (to reduce CORS failures)
+const proxies = [
+  "https://api.allorigins.win/get?url=",
+  "https://thingproxy.freeboard.io/fetch/",
+  "https://api.codetabs.com/v1/proxy/?quest="
 ];
 
 async function fetchRSSFeed(url) {
-  const proxy = "https://api.allorigins.win/get?url=";
-  const res = await fetch(proxy + encodeURIComponent(url));
-  const data = await res.json();
-  const parser = new DOMParser();
-  const xml = parser.parseFromString(data.contents, "text/xml");
-  return Array.from(xml.querySelectorAll("item")).map(item => ({
-    title: item.querySelector("title")?.textContent || "No title",
-    link: item.querySelector("link")?.textContent || "#",
-    description: item.querySelector("description")?.textContent || "",
-    pubDate: item.querySelector("pubDate")?.textContent || "",
-  }));
+  for (const proxy of proxies) {
+    try {
+      const response = await fetch(proxy + encodeURIComponent(url));
+      if (!response.ok) continue;
+      const data = await response.text();
+
+      // Parse XML safely
+      const parser = new DOMParser();
+      const xml = parser.parseFromString(data, "text/xml");
+      const items = xml.querySelectorAll("item");
+      if (items.length === 0) continue;
+
+      return Array.from(items).map((item) => ({
+        title: item.querySelector("title")?.textContent || "No title",
+        link: item.querySelector("link")?.textContent || "#",
+        description: item.querySelector("description")?.textContent || "",
+        pubDate: item.querySelector("pubDate")?.textContent || ""
+      }));
+    } catch (err) {
+      console.warn(`Proxy failed: ${proxy}`, err);
+    }
+  }
+  console.warn("All proxies failed for:", url);
+  return [];
 }
 
 async function loadDefenceNews() {
@@ -59,10 +78,10 @@ async function loadDefenceNews() {
     }
   }
 
-  // Sort by newest
+  // Sort newest first
   allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 
-  // Render first 12
+  // Display top 12
   renderNews(allArticles.slice(0, 12));
 }
 
@@ -85,6 +104,10 @@ function renderNews(articles) {
     )
     .join("");
 }
+
+loadDefenceNews();
+setInterval(loadDefenceNews, 10 * 60 * 1000);
+
 
 loadDefenceNews();
 setInterval(loadDefenceNews, 10 * 60 * 1000); // auto refresh every 10 min
