@@ -6,12 +6,13 @@ const RSS_FEEDS = [
   "https://www.military.com/rss-feeds/content"
 ];
 
+// Reliable HTTPS proxies for GitHub Pages
 const PROXIES = [
-  "https://api.allorigins.hexlet.app/get?url=",
-  "https://api.codetabs.com/v1/proxy?quest=",
+  "https://corsproxy.io/?",
+  "https://thingproxy.freeboard.io/fetch/",
 ];
 
-const NEWS_CONTAINER_ID = "news-container"; // The HTML container to insert news
+const NEWS_CONTAINER_ID = "news-container";
 const MAX_NEWS_ITEMS = 12;
 
 // ========== RSS FETCHING ==========
@@ -21,13 +22,12 @@ async function fetchRSSFeed(feedUrl) {
       const response = await fetch(proxy + encodeURIComponent(feedUrl));
       if (!response.ok) continue;
 
-      // Some proxies return .contents, others just text
-      const data = await response.json().catch(() => null);
-      const contents = data?.contents || data;
-      if (!contents) throw new Error("Invalid response");
-
+      const text = await response.text();
       const parser = new DOMParser();
-      const xml = parser.parseFromString(contents, "application/xml");
+      const xml = parser.parseFromString(text, "application/xml");
+
+      // Validate XML response
+      if (!xml || xml.querySelector("parsererror")) throw new Error("Invalid XML");
       return xml;
     } catch (e) {
       console.warn("Proxy failed:", proxy, e);
